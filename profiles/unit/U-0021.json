@@ -1,0 +1,23 @@
+{
+  "created": "2026-10-27T01:34:47-04:00",
+  "fields": {
+    "folder": "research/news",
+    "name": "Newslines",
+    "parent": "U-0020",
+    "repo": "R-0011",
+    "status_note": "Seeded 2026-10-27 from the earlier hand-kept unit list. Daily news pipeline; user term is newslines.",
+    "unit_kind": "pipeline",
+    "verified": false
+  },
+  "history": [
+    {
+      "at": "2026-10-27T01:34:47-04:00",
+      "detail": "creation action (already exists: profile only)",
+      "event": "created"
+    }
+  ],
+  "id": "U-0021",
+  "kind": "unit",
+  "schema": 1,
+  "status": "new"
+}

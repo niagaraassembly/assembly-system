@@ -1,0 +1,21 @@
+{
+  "created": "2026-10-27T01:34:44-04:00",
+  "fields": {
+    "name": "annual-updates",
+    "purpose": "Niagara Assembly annual updates: event information and preparation",
+    "remote": "niagaraassembly/annual-updates",
+    "status_note": "Seeded 2026-10-27 from the GitHub org listing; last push 2026-10-18.",
+    "visibility": "private"
+  },
+  "history": [
+    {
+      "at": "2026-10-27T01:34:44-04:00",
+      "detail": "creation action (already exists: profile only)",
+      "event": "created"
+    }
+  ],
+  "id": "R-0001",
+  "kind": "repo",
+  "schema": 1,
+  "status": "new"
+}

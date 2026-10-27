@@ -1,0 +1,21 @@
+{
+  "created": "2026-10-27T01:34:45-04:00",
+  "fields": {
+    "name": "heavymap-restricted",
+    "purpose": "Private: restricted/proprietary material the HeavyMap site may draw on. Unused for now.",
+    "remote": "niagaraassembly/heavymap-restricted",
+    "status_note": "Seeded 2026-10-27 from the GitHub org listing; last push 2026-10-18.",
+    "visibility": "private"
+  },
+  "history": [
+    {
+      "at": "2026-10-27T01:34:45-04:00",
+      "detail": "creation action (already exists: profile only)",
+      "event": "created"
+    }
+  ],
+  "id": "R-0006",
+  "kind": "repo",
+  "schema": 1,
+  "status": "new"
+}
