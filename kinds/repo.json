@@ -1,0 +1,38 @@
+{
+  "kind": "repo",
+  "prefix": "R",
+  "description": "A code base. Only a pointer lives here.",
+  "fields": [
+    {
+      "name": "name",
+      "type": "text",
+      "required": true,
+      "description": ""
+    },
+    {
+      "name": "remote",
+      "type": "text",
+      "required": false,
+      "description": "owner/name on the host."
+    },
+    {
+      "name": "purpose",
+      "type": "text",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "status_note",
+      "type": "text",
+      "required": false,
+      "description": ""
+    }
+  ],
+  "steps": [
+    {
+      "id": "provision",
+      "do": "manual",
+      "text": "Create the remote and the local checkouts. Outward: the owner approves; then bind the ID to a path in machine-flows."
+    }
+  ]
+}

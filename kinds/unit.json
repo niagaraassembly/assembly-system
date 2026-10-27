@@ -1,0 +1,76 @@
+{
+  "kind": "unit",
+  "prefix": "U",
+  "description": "A pillar, service, product, publication, pipeline or event the company runs.",
+  "fields": [
+    {
+      "name": "name",
+      "type": "text",
+      "required": true,
+      "description": ""
+    },
+    {
+      "name": "unit_kind",
+      "type": "enum",
+      "required": true,
+      "description": "",
+      "values": [
+        "pillar",
+        "service",
+        "product",
+        "publication",
+        "pipeline",
+        "event"
+      ]
+    },
+    {
+      "name": "repo",
+      "type": "link",
+      "required": false,
+      "description": "",
+      "target": "repo"
+    },
+    {
+      "name": "stage",
+      "type": "enum",
+      "required": false,
+      "description": "",
+      "values": [
+        "dispatch",
+        "scan",
+        "file",
+        "join",
+        "stores",
+        "bays",
+        "move",
+        "line"
+      ]
+    },
+    {
+      "name": "relies_on",
+      "type": "list",
+      "required": false,
+      "description": "IDs this unit depends on."
+    },
+    {
+      "name": "promises",
+      "type": "list",
+      "required": false,
+      "description": "",
+      "values": [
+        "view",
+        "read",
+        "make",
+        "save",
+        "acts"
+      ]
+    },
+    {
+      "name": "status_note",
+      "type": "text",
+      "required": false,
+      "description": ""
+    }
+  ],
+  "steps": []
+}

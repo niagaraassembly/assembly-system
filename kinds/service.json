@@ -1,0 +1,52 @@
+{
+  "kind": "service",
+  "prefix": "S",
+  "description": "A product or service the company has committed to, internal or external.",
+  "fields": [
+    {
+      "name": "name",
+      "type": "text",
+      "required": true,
+      "description": ""
+    },
+    {
+      "name": "direction",
+      "type": "enum",
+      "required": true,
+      "description": "External apps join here.",
+      "values": [
+        "internal",
+        "external"
+      ]
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "repo",
+      "type": "link",
+      "required": false,
+      "description": "",
+      "target": "repo"
+    },
+    {
+      "name": "status_note",
+      "type": "text",
+      "required": false,
+      "description": ""
+    }
+  ],
+  "steps": [
+    {
+      "id": "participation",
+      "do": "manual",
+      "text": "External participation: agree how the party affirms, extends or adds goals, beyond API access.",
+      "when": {
+        "direction": "external"
+      }
+    }
+  ]
+}

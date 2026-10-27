@@ -1,0 +1,49 @@
+{
+  "kind": "dataset",
+  "prefix": "D",
+  "description": "A store of data. Only a pointer lives here; the data lives elsewhere.",
+  "fields": [
+    {
+      "name": "name",
+      "type": "text",
+      "required": true,
+      "description": ""
+    },
+    {
+      "name": "store_kind",
+      "type": "enum",
+      "required": true,
+      "description": "",
+      "values": [
+        "database",
+        "csv",
+        "files",
+        "api"
+      ]
+    },
+    {
+      "name": "location",
+      "type": "text",
+      "required": false,
+      "description": "Pointer to where it lives, never the data."
+    },
+    {
+      "name": "sensitivity",
+      "type": "enum",
+      "required": false,
+      "description": "",
+      "values": [
+        "private",
+        "generic",
+        "public"
+      ]
+    },
+    {
+      "name": "status_note",
+      "type": "text",
+      "required": false,
+      "description": ""
+    }
+  ],
+  "steps": []
+}

@@ -1,0 +1,49 @@
+{
+  "kind": "goal",
+  "prefix": "G",
+  "description": "What a service has committed to, or an external party affirms, extends or adds.",
+  "fields": [
+    {
+      "name": "text",
+      "type": "text",
+      "required": true,
+      "description": "The goal."
+    },
+    {
+      "name": "service",
+      "type": "link",
+      "required": false,
+      "description": "",
+      "target": "service"
+    },
+    {
+      "name": "raised_by",
+      "type": "enum",
+      "required": true,
+      "description": "",
+      "values": [
+        "company",
+        "user"
+      ]
+    },
+    {
+      "name": "parties",
+      "type": "list",
+      "required": false,
+      "description": "Who is involved."
+    },
+    {
+      "name": "status_note",
+      "type": "text",
+      "required": false,
+      "description": ""
+    }
+  ],
+  "steps": [
+    {
+      "id": "convert",
+      "do": "manual",
+      "text": "Convert the goal into questions: create each with `assembly new question` and link it to this goal."
+    }
+  ]
+}

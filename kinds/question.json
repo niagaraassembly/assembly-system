@@ -1,0 +1,209 @@
+{
+  "kind": "question",
+  "prefix": "Q",
+  "description": "A precise question that advances the presence and obtainment of information, framed by one lens of regional industrial reality.",
+  "fields": [
+    {
+      "name": "text",
+      "type": "text",
+      "required": true,
+      "description": "The question, in the owner's words."
+    },
+    {
+      "name": "goal",
+      "type": "link",
+      "required": false,
+      "description": "The goal this question was converted from.",
+      "target": "goal"
+    },
+    {
+      "name": "service",
+      "type": "link",
+      "required": false,
+      "description": "The service the goal belongs to.",
+      "target": "service"
+    },
+    {
+      "name": "lens",
+      "type": "enum",
+      "required": true,
+      "description": "Law, land, companies, products, processes or programs.",
+      "values": [
+        "law",
+        "land",
+        "companies",
+        "products",
+        "processes",
+        "programs"
+      ]
+    },
+    {
+      "name": "region",
+      "type": "text",
+      "required": false,
+      "description": "Region or jurisdiction the question is about."
+    },
+    {
+      "name": "horizon",
+      "type": "enum",
+      "required": false,
+      "description": "Historic or current information.",
+      "values": [
+        "historic",
+        "current",
+        "both"
+      ]
+    },
+    {
+      "name": "raised_by",
+      "type": "enum",
+      "required": false,
+      "description": "Who raised the goal behind it.",
+      "values": [
+        "company",
+        "user"
+      ]
+    },
+    {
+      "name": "origin",
+      "type": "enum",
+      "required": false,
+      "description": "Internal service or external app.",
+      "values": [
+        "internal",
+        "external"
+      ]
+    },
+    {
+      "name": "trust",
+      "type": "enum",
+      "required": true,
+      "description": "Where the instructions came from. Derived or external never get unguarded write permission.",
+      "values": [
+        "owner",
+        "derived",
+        "external"
+      ]
+    },
+    {
+      "name": "sensitivity",
+      "type": "enum",
+      "required": true,
+      "description": "What kind of data the work touches.",
+      "values": [
+        "private",
+        "generic",
+        "public"
+      ]
+    },
+    {
+      "name": "intake",
+      "type": "enum",
+      "required": true,
+      "description": "Pulled in by a scan or filed in by hand or API.",
+      "values": [
+        "scan",
+        "file"
+      ]
+    },
+    {
+      "name": "cadence",
+      "type": "enum",
+      "required": false,
+      "description": "How often the intake repeats.",
+      "values": [
+        "once",
+        "daily",
+        "weekly",
+        "monthly"
+      ]
+    },
+    {
+      "name": "bay",
+      "type": "link",
+      "required": false,
+      "description": "The bay accumulating results.",
+      "target": "bay"
+    },
+    {
+      "name": "store",
+      "type": "link",
+      "required": false,
+      "description": "The store the results are finally merged into.",
+      "target": "dataset"
+    },
+    {
+      "name": "reviews",
+      "type": "int",
+      "required": false,
+      "description": "How many human review gates apply."
+    },
+    {
+      "name": "checks",
+      "type": "list",
+      "required": false,
+      "description": "Names of the acceptance checks that must pass."
+    },
+    {
+      "name": "due",
+      "type": "date",
+      "required": false,
+      "description": "Due date, if any."
+    },
+    {
+      "name": "procedure",
+      "type": "list",
+      "required": false,
+      "description": "Exact steps to run, in order. When present the handoff is exact and needs no interpretation."
+    },
+    {
+      "name": "writes",
+      "type": "bool",
+      "required": false,
+      "description": "True if the work changes files; forces a gate for non-owner trust."
+    },
+    {
+      "name": "machine",
+      "type": "text",
+      "required": false,
+      "description": "A machine name or 'any'."
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "required": false,
+      "description": "Folder the task runs in (for example ~/na/na-research). Emitted so the handoff states where the work happens."
+    },
+    {
+      "name": "status_note",
+      "type": "text",
+      "required": false,
+      "description": "Free note for the owner."
+    },
+    {
+      "name": "supersedes",
+      "type": "link",
+      "required": false,
+      "description": "An earlier question this one replaces.",
+      "target": "question"
+    }
+  ],
+  "steps": [
+    {
+      "id": "dispatch",
+      "do": "handoff",
+      "template": "question",
+      "when": {
+        "intake": "scan"
+      }
+    },
+    {
+      "id": "file-intake",
+      "do": "manual",
+      "text": "Intake is by filing: attach or file the source records, then run `assembly dispatch` for this ID.",
+      "when": {
+        "intake": "file"
+      }
+    }
+  ]
+}

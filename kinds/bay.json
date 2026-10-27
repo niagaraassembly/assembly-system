@@ -1,0 +1,69 @@
+{
+  "kind": "bay",
+  "prefix": "B",
+  "description": "A time-limited accumulation branch holding results until final checking and merger into a main store.",
+  "fields": [
+    {
+      "name": "name",
+      "type": "text",
+      "required": true,
+      "description": ""
+    },
+    {
+      "name": "period",
+      "type": "text",
+      "required": true,
+      "description": "For example 2026-W44."
+    },
+    {
+      "name": "region",
+      "type": "text",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "branch",
+      "type": "text",
+      "required": false,
+      "description": "The branch name in the target repo."
+    },
+    {
+      "name": "opens",
+      "type": "date",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "closes",
+      "type": "date",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "state",
+      "type": "enum",
+      "required": false,
+      "description": "",
+      "values": [
+        "open",
+        "closed",
+        "reviewing",
+        "merged"
+      ]
+    },
+    {
+      "name": "store",
+      "type": "link",
+      "required": false,
+      "description": "",
+      "target": "dataset"
+    }
+  ],
+  "steps": [
+    {
+      "id": "open-branch",
+      "do": "manual",
+      "text": "Open the branch in the target repo and record its name on this bay."
+    }
+  ]
+}
