@@ -196,6 +196,23 @@ class CliTest(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("retired", out + err)
 
+    def test_new_existing_flag_skips_provisioning(self):
+        rc, out, _ = self.run_cli("new", "repo", "--set", "name=site", "--set", "remote=niagaraassembly/site", "--existing", "--apply")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("complete", out)
+        rc, out, _ = self.run_cli("new", "repo", "--set", "name=x", "--existing")
+        self.assertIn("already exists", out)
+        self.assertIn("preview only", out)
+
+    def test_set_only_suggests_dispatch_for_kinds_that_have_a_handoff(self):
+        self.run_cli("new", "repo", "--set", "name=crm", "--existing", "--apply")
+        rc, out, _ = self.run_cli("set", "R-0001", "--set", "purpose=Helps a website function operate.", "--apply")
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("dispatch", out)
+        self.run_cli(*Q, "--outbox", str(self.outbox), "--apply")
+        rc, out, _ = self.run_cli("set", "Q-0001", "--set", "region=Hamilton", "--apply")
+        self.assertIn("dispatch Q-0001", out)
+
     def test_confirm_refuses_a_record_that_is_not_awaiting(self):
         self.run_cli(*Q, "--outbox", str(self.outbox), "--apply")
         self.assertEqual(self.run_cli("confirm", "Q-0001")[0], 2)

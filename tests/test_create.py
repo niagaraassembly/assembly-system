@@ -81,6 +81,24 @@ class CreateTest(unittest.TestCase):
         self.assertEqual(emit.calls, [("Q-0001", "dispatch"), ("Q-0001", "dispatch")])
         self.assertEqual(mint(self.root, "Q"), "Q-0002")
 
+    def test_existing_things_get_a_profile_and_no_provisioning_steps(self):
+        plan = plan_create(self.root, KINDS, "repo", {"name": "site", "remote": "niagaraassembly/site"}, existing=True)
+        self.assertEqual([s["id"] for s in plan["steps"]], ["write-profile"])
+        c = apply_create(self.root, KINDS, "repo", {"name": "site", "remote": "niagaraassembly/site"}, self.outbox, emit=Recorder(), existing=True)
+        self.assertEqual((c["id"], c["state"]), ("R-0001", "complete"))
+        rec = load(self.root, "R-0001", KINDS)
+        self.assertEqual(rec["history"][0]["event"], "created")
+        self.assertIn("already exists", rec["history"][0]["detail"])
+        # without the flag the same repo would carry the manual provisioning step
+        c2 = apply_create(self.root, KINDS, "repo", {"name": "other"}, self.outbox, emit=Recorder())
+        self.assertEqual(c2["state"], "manual-pending")
+
+    def test_existing_question_does_not_dispatch(self):
+        emit = Recorder()
+        c = apply_create(self.root, KINDS, "question", GOOD, self.outbox, emit=emit, existing=True)
+        self.assertEqual((emit.calls, c["state"]), ([], "complete"))
+        self.assertEqual(load(self.root, c["id"], KINDS)["status"], "new")
+
     def test_resume_does_not_repeat_done_steps(self):
         emit = Recorder()
         apply_create(self.root, KINDS, "question", GOOD, self.outbox, emit=emit)

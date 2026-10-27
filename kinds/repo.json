@@ -16,6 +16,16 @@
       "description": "owner/name on the host."
     },
     {
+      "name": "visibility",
+      "type": "enum",
+      "required": false,
+      "values": [
+        "private",
+        "public"
+      ],
+      "description": "Who can read the remote."
+    },
+    {
       "name": "purpose",
       "type": "text",
       "required": false,
