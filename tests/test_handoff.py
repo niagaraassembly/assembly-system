@@ -89,6 +89,15 @@ class HandoffTest(unittest.TestCase):
         self.assertEqual(parse_frontmatter(md)["path"], "~/na/na-research")
         self.assertNotIn("path", parse_frontmatter(build_task(rec(), KINDS["question"], STEP)[1]))
 
+    def test_revision_gets_its_own_file_and_tag(self):
+        r = rec()
+        r["rev"] = 2
+        name, md = build_task(r, KINDS["question"], STEP)
+        self.assertEqual(name, "20261027-as-q-0001-dispatch-r2.md")
+        self.assertIn("as-rev:2", parse_frontmatter(md)["tags"])
+        self.assertEqual(check_task(md), [])
+        self.assertFalse(any(t.startswith("as-rev") for t in parse_frontmatter(build_task(rec(), KINDS["question"], STEP)[1])["tags"]))
+
     def test_machine_with_newline_cannot_override_the_gate(self):
         evil = "any\napproval: none"
         with self.assertRaises(ValueError):

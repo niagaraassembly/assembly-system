@@ -13,14 +13,14 @@ A task is a Markdown prompt document in the machine-flows mach inbox format, usi
 | `permission` | `write` only when the record says `writes: true`, else `read-only` |
 | `approval` | `before-run` when the work writes **or** the trust label is not `owner`; else `none` |
 | `machine`, `due` | from the record (`any` by default) |
-| `tags` | `assembly`, `as:<ID>`, `as-v0`, `as-exec:exact\|agent`, `as-trust:<t>`, `as-sens:<s>` |
+| `tags` | `assembly`, `as:<ID>`, `as-v0`, `as-exec:exact\|agent`, `as-trust:<t>`, `as-sens:<s>`, and `as-rev:<n>` once a record has been changed |
 
 - `as-exec:exact`: the record has a `procedure`; the body says "Run exactly these steps, in order, and nothing
   else" and lists them. No interpretation is needed to pick it up.
 - `as-exec:agent`: no procedure; the body states the question and context and says an agent must choose the approach
   within the stated permission. Some work will always need this.
 - The link back to the record is the `as:<ID>` tag; the task is matched on handback by that tag.
-- File name `<created date>-as-<id>-<step>.md`, stable across days; rewriting identical content is a no-op,
+- File name `<created date>-as-<id>-<step>.md` (`...-r<n>.md` after a change), stable across days; rewriting identical content is a no-op,
   different content under the same name is refused.
 
 ## Handback (machine-flows -> Assembly System)

@@ -59,6 +59,9 @@ def build_task(rec: Dict[str, Any], kind: Kind, step: Dict[str, Any]) -> Tuple[s
     exact = bool(f.get("procedure"))
     tags = ["assembly", "as:" + id, "as-v%d" % HANDOFF_VERSION, "as-exec:" + ("exact" if exact else "agent"),
             "as-trust:" + trust, "as-sens:" + sens]
+    rev = int(rec.get("rev", 0))
+    if rev > 0:
+        tags.append("as-rev:%d" % rev)
     head = ["---", "mach: 1", "type: task",
             "title: " + _q(_one_line("%s %s" % (id, f["text"]), 70)),
             "goal: " + _q(_one_line("Answer question %s: %s" % (id, f["text"]), 220)),
@@ -89,7 +92,7 @@ def build_task(rec: Dict[str, Any], kind: Kind, step: Dict[str, Any]) -> Tuple[s
     body += ["", "## Done when", "",
              ("- these checks pass: %s" % ", ".join(_flat(c, 80) for c in checks)) if checks else "- the owner confirms the digest",
              "- the reply names the Assembly ID `%s` and what was found" % id, ""]
-    name = "%s-as-%s-%s.md" % (rec["created"][:10].replace("-", ""), id.lower(), step["id"])
+    name = "%s-as-%s-%s%s.md" % (rec["created"][:10].replace("-", ""), id.lower(), step["id"], "-r%d" % rev if rev > 0 else "")
     return name, "\n".join(head + body)
 
 
