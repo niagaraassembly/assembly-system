@@ -166,7 +166,8 @@
       "name": "machine",
       "type": "text",
       "required": false,
-      "description": "A machine name or 'any'."
+      "description": "A machine name (letters, digits, dot, dash, underscore) or \"any\".",
+      "pattern": "[A-Za-z0-9][A-Za-z0-9._-]*"
     },
     {
       "name": "path",

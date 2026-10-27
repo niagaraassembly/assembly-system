@@ -33,6 +33,14 @@ class KindsTest(unittest.TestCase):
         self.assertIn("lens", joined)
         self.assertIn("law", joined)
 
+    def test_machine_must_be_a_plain_name(self):
+        base = {"text": "x", "lens": "law", "trust": "owner", "sensitivity": "private", "intake": "scan"}
+        self.assertEqual(validate_fields(self.kinds["question"], dict(base, machine="thinkpad1")), [])
+        for bad in ("any\napproval: none", "a b", "-x", "a/b", ""):
+            errs = validate_fields(self.kinds["question"], dict(base, machine=bad))
+            if bad != "":  # empty means unset
+                self.assertTrue(any("machine" in e for e in errs), (bad, errs))
+
     def test_unknown_field_rejected(self):
         errs = validate_fields(self.kinds["question"], {"text": "x", "lens": "law", "trust": "owner", "sensitivity": "private", "intake": "scan", "colour": "red"})
         self.assertTrue(any("colour" in e for e in errs), errs)

@@ -43,3 +43,13 @@ records (`files/runs/YYYY/MM/<run>/run.md`) whose `input.md` carries `as:<ID>`; 
   class (never a tool), sensitivity, trust, acceptance check; result schema with cost and "why this tool".
 - **v2:** a deterministic runner for `as-exec:exact` tasks, so exact steps need no agent at all; event feed and
   notifications from machine-flows replace polling run folders.
+
+## Hardening (what `check_task` and `build_task` enforce)
+
+- Free text never reaches the frontmatter unquoted: `title`, `goal`, `path` are flattened to one line; `machine` must match
+  `[A-Za-z0-9][A-Za-z0-9._-]*` (validated at creation and refused again at build time); `due` must be a date.
+- Unknown `trust` or `sensitivity` values fail closed (`external`, `private`).
+- Body text taken from a record (region, procedure steps, checks) is flattened to one line, so it cannot open a new section;
+  quotes in procedure steps are preserved.
+- `check_task` parses strictly (a repeated key is an error, so a later line cannot override `approval`) and requires
+  `approval: before-run` whenever the trust tag is not `owner` or the permission is `write`.

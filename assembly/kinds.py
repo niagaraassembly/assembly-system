@@ -19,6 +19,7 @@ class Field:
     target: Optional[str] = None          # kind name a link points at
     target_prefix: Optional[str] = None   # resolved from target by load_kinds
     description: str = ""
+    pattern: Optional[str] = None         # text fields: the whole value must match this regex
 
 
 @dataclass
@@ -46,7 +47,7 @@ def load_kinds(kinds_dir: Path) -> Dict[str, Kind]:
                 raise ValueError("%s: field %s has unknown type %s" % (path.name, f["name"], f["type"]))
             fields.append(Field(name=f["name"], type=f["type"], required=bool(f.get("required")),
                                 values=list(f.get("values", [])), target=f.get("target"),
-                                description=f.get("description", "")))
+                                description=f.get("description", ""), pattern=f.get("pattern")))
         kinds[raw["kind"]] = Kind(raw["kind"], raw["prefix"], raw.get("description", ""), fields, list(raw.get("steps", [])))
     prefixes = {}
     for k in kinds.values():
@@ -77,6 +78,8 @@ def validate_fields(kind: Kind, values: Dict[str, Any]) -> List[str]:
         v = values[f.name]
         if f.type == "text" and not isinstance(v, str):
             errors.append("%s: must be text" % f.name)
+        elif f.type == "text" and f.pattern and not re.fullmatch(f.pattern, v):
+            errors.append("%s: %r does not match the allowed form %s" % (f.name, v[:40], f.pattern))
         elif f.type == "enum" and v not in f.values:
             errors.append("%s: %r is not one of %s" % (f.name, v, ", ".join(f.values)))
         elif f.type == "link":
