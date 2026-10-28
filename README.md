@@ -45,44 +45,27 @@ tests use the real `mach run --dry-run` when `mach` is installed).
 
 ## Local questions workspace
 
-Start the local website from this checkout:
+The website now lives in [niagaraassembly/assembly-site](https://github.com/niagaraassembly/assembly-site).
+Its HTTP adapter and browser assets are separate from this core. See its README for launch and configuration.
+
+Assembly owns question drafts, kinds, IDs, validation, immutable original text/source links, history and backups.
+The question kind's `capture.metadata` list controls which schema fields the capture interface may edit.
+Draft capture never emits handoffs during creation, resume or dispatch.
+
+Use `ASSEMBLY_ROOT` to select a record store outside the checkout. A local ignored `.assembly-record-root`
+file can redirect this checkout's CLI to an existing absolute record directory; explicit root/environment
+settings take precedence. Migrated runtime data stays outside Git; the local pre-migration files are a
+rollback copy and are no longer active when the redirect is present.
 
 ```sh
-bin/assembly serve --port 8031
-```
-
-Open <http://127.0.0.1:8031>. The question table shows three-line previews, full original text in a modal,
-key labels, and expandable metadata. Paste long text directly; line breaks and Unicode are preserved.
-Requests have an explicit 8 MiB limit; rejected saves leave the text in the form. Unsaved form contents
-survive closing the modal during the current page session; save before reloading or closing the page.
-
-Saving creates a normal `Q-…` profile marked as a **capture-only draft**. Required dispatch metadata can
-be supplied later; nothing is inferred about trust, sensitivity, region, or lens. Drafts cannot dispatch
-or emit handoffs, even when resumed. This interface does not yet run scans or AI enrichment.
-
-Expand a row to edit optional metadata and explicitly save it. Updates record history, bump the revision,
-and back up the previous profile under `backups/profiles/`. A stale browser revision is rejected so you can
-load the latest metadata and review your changes before saving again. Use one writer at a time: revision
-checks cover requests to one server, not concurrent CLI changes or a second server.
-
-**Add linked question** creates a separate draft with `source_question` pointing to its origin. The original
-text and source link stay intact. The table and reader show derived questions and supersession links when
-present. Linking does not automatically supersede a question; the existing explicit `supersede` command
-handles that decision.
-
-Records live in this checkout's `profiles/`, `creations/`, and `registry/`; keep them when moving or retiring
-a worktree. `ASSEMBLY_ROOT` can select an existing record root. Stop the foreground server with Ctrl+C.
-Only loopback access is supported; no background service is installed.
-
-The equivalent CLI capture starts with a write-free preview:
-
-```sh
-bin/assembly new question --draft --set text="What can this region make?"
+ASSEMBLY_ROOT=~/na/local-data/assembly bin/assembly list question
+bin/assembly new question --draft --set text="What can this region make?"  # preview
 bin/assembly new question --draft --from /path/to/question.json --apply
 ```
 
-The JSON file contains a field object such as `{"text": "Full original text", "title": "Optional title"}`.
-The website uses these same creation and metadata-change operations.
+The JSON file is a field object such as `{"text": "Full original text", "title": "Optional title"}`.
+Metadata edits use `set`; originals develop through separately linked questions. Promotion to executable
+work and final Mach integration remain separate future steps.
 
 ## Layout
 

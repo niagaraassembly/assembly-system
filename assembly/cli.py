@@ -305,13 +305,22 @@ def cmd_confirm(a, root, kinds) -> int:
     return 0
 
 
-def cmd_serve(a, root, kinds) -> int:
-    from .web import run
-    return run(root, kinds, a.host, a.port)
+def resolve_root(root=None, repo=None):
+    repo = Path(repo or REPO)
+    explicit = root or os.environ.get("ASSEMBLY_ROOT")
+    if explicit:
+        return Path(explicit).expanduser()
+    marker = repo / ".assembly-record-root"
+    if marker.exists():
+        target = Path(marker.read_text(encoding="utf-8").strip()).expanduser()
+        if not target.is_absolute() or not target.is_dir():
+            raise ValueError("The local Assembly record-root redirect must point to an existing absolute directory.")
+        return target
+    return repo
 
 
 def main(argv: Optional[List[str]] = None, root: Optional[Path] = None) -> int:
-    root = Path(root or os.environ.get("ASSEMBLY_ROOT") or REPO)
+    root = resolve_root(root)
     p = argparse.ArgumentParser(prog="assembly", description="Assembly System: create, dispatch and track company records.")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("kinds"); s.add_argument("kind", nargs="?")
@@ -332,13 +341,10 @@ def main(argv: Optional[List[str]] = None, root: Optional[Path] = None) -> int:
     s = sub.add_parser("resume"); s.add_argument("id"); s.add_argument("--outbox")
     s = sub.add_parser("handback"); s.add_argument("--runs"); s.add_argument("--apply", action="store_true")
     s = sub.add_parser("confirm"); s.add_argument("id")
-    s = sub.add_parser("serve", help="open the local Questions interface")
-    s.add_argument("--host", choices=("127.0.0.1", "localhost"), default="127.0.0.1")
-    s.add_argument("--port", type=int, default=8031)
     a = p.parse_args(argv)
     kinds = load_kinds(REPO / "kinds")
     return {"kinds": cmd_kinds, "new": cmd_new, "show": cmd_show, "list": cmd_list, "lint": cmd_lint,
-            "dispatch": cmd_dispatch, "set": cmd_set, "retire": cmd_retire, "supersede": cmd_supersede, "resume": cmd_resume, "handback": cmd_handback, "confirm": cmd_confirm, "serve": cmd_serve}[a.cmd](a, root, kinds)
+            "dispatch": cmd_dispatch, "set": cmd_set, "retire": cmd_retire, "supersede": cmd_supersede, "resume": cmd_resume, "handback": cmd_handback, "confirm": cmd_confirm}[a.cmd](a, root, kinds)
 
 
 if __name__ == "__main__":

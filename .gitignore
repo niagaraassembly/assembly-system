@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 outbox/
 backups/
+.assembly-record-root
 registry/.lock
