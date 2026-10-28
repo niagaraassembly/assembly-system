@@ -1,0 +1,21 @@
+{
+  "created": "2026-10-27T01:34:46-04:00",
+  "fields": {
+    "name": "Explore",
+    "parent": "U-0005",
+    "status_note": "Seeded 2026-10-27 from the earlier hand-kept unit list. No verified repo binding.",
+    "unit_kind": "product",
+    "verified": false
+  },
+  "history": [
+    {
+      "at": "2026-10-27T01:34:46-04:00",
+      "detail": "creation action (already exists: profile only)",
+      "event": "created"
+    }
+  ],
+  "id": "U-0007",
+  "kind": "unit",
+  "schema": 1,
+  "status": "new"
+}

@@ -1,0 +1,22 @@
+{
+  "created": "2026-10-27T01:34:47-04:00",
+  "fields": {
+    "folder": "places",
+    "name": "Places",
+    "repo": "R-0013",
+    "status_note": "Seeded 2026-10-27 from the earlier hand-kept unit list. Binding unverified; separate from goods.",
+    "unit_kind": "pillar",
+    "verified": false
+  },
+  "history": [
+    {
+      "at": "2026-10-27T01:34:47-04:00",
+      "detail": "creation action (already exists: profile only)",
+      "event": "created"
+    }
+  ],
+  "id": "U-0018",
+  "kind": "unit",
+  "schema": 1,
+  "status": "new"
+}

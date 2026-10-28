@@ -1,0 +1,27 @@
+{
+  "created": "2026-10-27T01:34:45-04:00",
+  "fields": {
+    "name": "crm",
+    "purpose": "Helps a website function operate.",
+    "remote": "niagaraassembly/crm",
+    "status_note": "Seeded 2026-10-27 from the GitHub org listing; last push 2026-09-03. Purpose stated by the owner 2026-10-27.",
+    "visibility": "private"
+  },
+  "history": [
+    {
+      "at": "2026-10-27T01:34:45-04:00",
+      "detail": "creation action (already exists: profile only)",
+      "event": "created"
+    },
+    {
+      "at": "2026-10-27T01:39:20-04:00",
+      "detail": "purpose: (unset) -> Helps a website function operate.; status_note: Seeded 2026-10-27 from the GitHub org listing; last push 2026-09-03. No descript -> Seeded 2026-10-27 from the GitHub org listing; last push 2026-09-03. Purpose sta [by morgen]",
+      "event": "changed"
+    }
+  ],
+  "id": "R-0003",
+  "kind": "repo",
+  "rev": 1,
+  "schema": 1,
+  "status": "new"
+}

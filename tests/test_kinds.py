@@ -41,6 +41,19 @@ class KindsTest(unittest.TestCase):
             if bad != "":  # empty means unset
                 self.assertTrue(any("machine" in e for e in errs), (bad, errs))
 
+    def test_unit_carries_what_the_manifest_recorded(self):
+        names = {f.name for f in self.kinds["unit"].fields}
+        self.assertEqual({"parent", "folder", "verified", "repo", "unit_kind"} - names, set())
+        base = {"name": "Newslines", "unit_kind": "pipeline"}
+        self.assertEqual(validate_fields(self.kinds["unit"], dict(base, parent="U-0020", repo="R-0011", folder="research/news", verified=False)), [])
+        self.assertTrue(any("parent" in e for e in validate_fields(self.kinds["unit"], dict(base, parent="R-0001"))))
+        self.assertTrue(any("verified" in e for e in validate_fields(self.kinds["unit"], dict(base, verified="no"))))
+
+    def test_repo_carries_visibility(self):
+        base = {"name": "site", "remote": "niagaraassembly/site"}
+        self.assertEqual(validate_fields(self.kinds["repo"], dict(base, visibility="public")), [])
+        self.assertTrue(any("visibility" in e for e in validate_fields(self.kinds["repo"], dict(base, visibility="secret"))))
+
     def test_unknown_field_rejected(self):
         errs = validate_fields(self.kinds["question"], {"text": "x", "lens": "law", "trust": "owner", "sensitivity": "private", "intake": "scan", "colour": "red"})
         self.assertTrue(any("colour" in e for e in errs), errs)

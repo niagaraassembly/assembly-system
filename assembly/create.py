@@ -24,19 +24,20 @@ def _applies(step: Dict[str, Any], values: Dict[str, Any]) -> bool:
     return all(values.get(k) == v for k, v in step.get("when", {}).items())
 
 
-def _steps_for(kind: Kind, values: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _steps_for(kind: Kind, values: Dict[str, Any], existing: bool = False) -> List[Dict[str, Any]]:
     steps = [{"id": "write-profile", "do": "profile"}]
-    steps += [dict(s) for s in kind.steps if _applies(s, values)]
+    if not existing:  # a thing that already exists needs no provisioning, handoff or checklist
+        steps += [dict(s) for s in kind.steps if _applies(s, values)]
     return steps
 
 
-def plan_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dict[str, Any]) -> Dict[str, Any]:
+def plan_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dict[str, Any], existing: bool = False) -> Dict[str, Any]:
     """Preview only: validates and lists the steps. Writes nothing and mints nothing."""
     if kind_name not in kinds:
         return {"kind": kind_name, "errors": ["unknown kind %r (known: %s)" % (kind_name, ", ".join(sorted(kinds)))],
                 "steps": [], "fields": values}
     kind = kinds[kind_name]
-    return {"kind": kind_name, "errors": validate_fields(kind, values), "steps": _steps_for(kind, values), "fields": values}
+    return {"kind": kind_name, "errors": validate_fields(kind, values), "steps": _steps_for(kind, values, existing), "fields": values}
 
 
 def _creation_path(root: Path, id: str) -> Path:
@@ -82,14 +83,14 @@ def _run_handoffs(root: Path, kinds: Dict[str, Kind], c: Dict[str, Any], outbox:
 
 
 def apply_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dict[str, Any],
-                 outbox: Path, emit: Optional[Callable] = None) -> Dict[str, Any]:
-    plan = plan_create(root, kinds, kind_name, values)
+                 outbox: Path, emit: Optional[Callable] = None, existing: bool = False) -> Dict[str, Any]:
+    plan = plan_create(root, kinds, kind_name, values, existing)
     if plan["errors"]:
         raise CreationError(plan["errors"])
     kind = kinds[kind_name]
     id = mint(root, kind.prefix)
     rec = new_record(kind, id, values)
-    add_event(rec, "created", "creation action")
+    add_event(rec, "created", "creation action (already exists: profile only)" if existing else "creation action")
     save(root, rec)
     c = {"id": id, "kind": kind_name, "state": "partial", "steps": []}
     for s in plan["steps"]:

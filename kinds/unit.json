@@ -70,6 +70,25 @@
       "type": "text",
       "required": false,
       "description": ""
+    },
+    {
+      "name": "parent",
+      "type": "link",
+      "required": false,
+      "target": "unit",
+      "description": "The unit this one sits under (for example a product under the Products pillar)."
+    },
+    {
+      "name": "folder",
+      "type": "text",
+      "required": false,
+      "description": "Folder inside the repo where the unit lives."
+    },
+    {
+      "name": "verified",
+      "type": "bool",
+      "required": false,
+      "description": "True once the owner has confirmed the repo and folder binding."
     }
   ],
   "steps": []

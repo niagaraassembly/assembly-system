@@ -1,0 +1,23 @@
+{
+  "created": "2026-10-27T01:34:46-04:00",
+  "fields": {
+    "folder": "services",
+    "name": "Tools",
+    "parent": "U-0009",
+    "repo": "R-0013",
+    "status_note": "Seeded 2026-10-27 from the earlier hand-kept unit list. Service binding unverified.",
+    "unit_kind": "service",
+    "verified": false
+  },
+  "history": [
+    {
+      "at": "2026-10-27T01:34:46-04:00",
+      "detail": "creation action (already exists: profile only)",
+      "event": "created"
+    }
+  ],
+  "id": "U-0013",
+  "kind": "unit",
+  "schema": 1,
+  "status": "new"
+}

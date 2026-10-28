@@ -1,0 +1,21 @@
+{
+  "created": "2026-10-27T01:34:45-04:00",
+  "fields": {
+    "name": "membership",
+    "purpose": "Membership development, intel intake and relationship tracking (private; personal data)",
+    "remote": "niagaraassembly/membership",
+    "status_note": "Seeded 2026-10-27 from the GitHub org listing; last push 2026-10-18.",
+    "visibility": "private"
+  },
+  "history": [
+    {
+      "at": "2026-10-27T01:34:45-04:00",
+      "detail": "creation action (already exists: profile only)",
+      "event": "created"
+    }
+  ],
+  "id": "R-0010",
+  "kind": "repo",
+  "schema": 1,
+  "status": "new"
+}
