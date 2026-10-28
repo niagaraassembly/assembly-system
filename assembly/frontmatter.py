@@ -15,7 +15,8 @@ def _value(raw: str) -> Any:
     return raw
 
 
-def parse_frontmatter(text: str) -> Dict[str, Any]:
+def parse_frontmatter(text: str, strict: bool = False) -> Dict[str, Any]:
+    """strict=True rejects a repeated key (a later line must never silently override an earlier one)."""
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         raise ValueError("no frontmatter")
@@ -28,5 +29,8 @@ def parse_frontmatter(text: str) -> Dict[str, Any]:
         if ":" not in line:
             raise ValueError("bad frontmatter line: %r" % line[:60])
         k, v = line.split(":", 1)
-        out[k.strip()] = _value(v)
+        k = k.strip()
+        if strict and k in out:
+            raise ValueError("duplicate key %s" % k)
+        out[k] = _value(v)
     raise ValueError("frontmatter is not closed")

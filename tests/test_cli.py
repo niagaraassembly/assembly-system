@@ -143,6 +143,59 @@ class CliTest(unittest.TestCase):
         self.assertEqual(load(self.root, "Q-0001", KINDS)["status"], "answered")
         self.assertEqual(self.run_cli("confirm", "Q-0001")[0], 2)
 
+    def test_set_preview_apply_and_revised_dispatch(self):
+        self.run_cli(*Q, "--outbox", str(self.outbox), "--apply")
+        rc, out, _ = self.run_cli("set", "Q-0001", "--set", "lens=land")
+        self.assertEqual(rc, 0)
+        self.assertIn("lens: law -> land", out)
+        self.assertIn("preview only", out)
+        rec = load(self.root, "Q-0001", KINDS)
+        self.assertEqual((rec["fields"]["lens"], rec.get("rev", 0)), ("law", 0))
+        rc, out, _ = self.run_cli("set", "Q-0001", "--set", "region=Hamilton", "--apply")
+        self.assertEqual(rc, 0, out)
+        rec = load(self.root, "Q-0001", KINDS)
+        self.assertEqual((rec["fields"]["region"], rec["rev"]), ("Hamilton", 1))
+        rc, out, _ = self.run_cli("dispatch", "Q-0001", "--outbox", str(self.outbox), "--apply")
+        self.assertEqual(rc, 0, out)
+        names = sorted(p.name for p in self.outbox.glob("*.md"))
+        self.assertEqual(len(names), 2)
+        self.assertTrue(any(n.endswith("-dispatch-r1.md") for n in names), names)
+        self.assertTrue(any(n.endswith("-dispatch.md") for n in names), names)
+
+    def test_set_invalid_exits_2_and_unset_works(self):
+        self.run_cli(*Q, "--outbox", str(self.outbox), "--apply")
+        rc, out, err = self.run_cli("set", "Q-0001", "--set", "lens=weather", "--apply")
+        self.assertEqual(rc, 2)
+        self.assertIn("lens", out + err)
+        self.run_cli("set", "Q-0001", "--set", "region=X", "--apply")
+        self.run_cli("set", "Q-0001", "--unset", "region", "--apply")
+        self.assertNotIn("region", load(self.root, "Q-0001", KINDS)["fields"])
+
+    def test_retire_and_supersede_commands(self):
+        for _ in range(2):
+            self.run_cli(*Q, "--outbox", str(self.outbox), "--apply")
+        rc, out, _ = self.run_cli("supersede", "Q-0001", "--by", "Q-0002")
+        self.assertIn("preview only", out)
+        self.assertEqual(load(self.root, "Q-0001", KINDS)["status"], "dispatched")
+        self.assertEqual(self.run_cli("supersede", "Q-0001", "--by", "Q-0002", "--apply")[0], 0)
+        self.assertEqual(load(self.root, "Q-0001", KINDS)["status"], "retired")
+        self.assertEqual(self.run_cli("retire", "Q-0002", "--reason", "no longer needed", "--apply")[0], 0)
+        self.assertEqual(self.run_cli("retire", "Q-0002", "--reason", "again", "--apply")[0], 2)
+        self.assertEqual(self.run_cli("retire", "Q-0001", "--reason", "x")[0], 2)  # already retired, even as a preview
+
+    def test_dispatch_refuses_a_retired_record(self):
+        self.run_cli(*Q, "--outbox", str(self.outbox), "--apply")
+        self.run_cli("retire", "Q-0001", "--reason", "x", "--apply")
+        self.assertEqual(self.run_cli("dispatch", "Q-0001", "--outbox", str(self.outbox), "--apply")[0], 2)
+
+    def test_lint_warns_on_link_to_retired_and_unfinished_supersede(self):
+        self.run_cli("new", "goal", "--set", "text=g", "--set", "raised_by=company", "--apply")
+        self.run_cli(*Q, "--set", "goal=G-0001", "--outbox", str(self.outbox), "--apply")
+        self.run_cli("retire", "G-0001", "--reason", "x", "--apply")
+        rc, out, err = self.run_cli("lint")
+        self.assertEqual(rc, 1)
+        self.assertIn("retired", out + err)
+
     def test_confirm_refuses_a_record_that_is_not_awaiting(self):
         self.run_cli(*Q, "--outbox", str(self.outbox), "--apply")
         self.assertEqual(self.run_cli("confirm", "Q-0001")[0], 2)

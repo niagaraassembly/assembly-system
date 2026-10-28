@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .change import ChangeError, apply_set, check_retire, check_supersede, plan_set, retire, supersede
 from .create import CreationError, _applies, apply_create, plan_create, resume_create
 from .handback import apply_handback
 from .handoff import build_task, emit_for_step
@@ -146,6 +147,12 @@ def cmd_lint(a, root, kinds) -> int:
                 v = rec["fields"].get(f.name)
                 if f.type == "link" and v and v not in list_ids(root, f.target):
                     errors.append("%s: %s: %s does not exist" % (id, f.name, v))
+                elif f.type == "link" and v:
+                    target = load(root, v, kinds)
+                    if f.name == "supersedes" and target["status"] != "retired":
+                        warnings.append("%s: supersedes %s but %s is not retired" % (id, v, v))
+                    elif f.name != "supersedes" and target["status"] == "retired" and rec["status"] != "retired":
+                        warnings.append("%s: %s points at retired record %s" % (id, f.name, v))
     for cp in sorted((Path(root) / "creations").glob("*.json")) if (Path(root) / "creations").exists() else []:
         c = json.loads(cp.read_text())
         if c.get("state") == "partial":
@@ -163,6 +170,9 @@ def cmd_dispatch(a, root, kinds) -> int:
     rec = _find(root, kinds, a.id)
     if rec is None:
         print("no such record: %s" % a.id, file=sys.stderr)
+        return 2
+    if rec["status"] == "retired":
+        print("%s is retired; nothing is dispatched for a retired record" % a.id, file=sys.stderr)
         return 2
     kind = kinds[rec["kind"]]
     steps = [s for s in kind.steps if s["do"] == "handoff" and _applies(s, rec["fields"])]
@@ -182,6 +192,69 @@ def cmd_dispatch(a, root, kinds) -> int:
         rec["status"] = "dispatched"
         add_event(rec, "dispatched", "dispatch command")
         save(root, rec)
+    return 0
+
+
+def _fail(e: ChangeError) -> int:
+    for err in e.errors:
+        print("error: " + err)
+    return 2
+
+
+def cmd_set(a, root, kinds) -> int:
+    rec = _find(root, kinds, a.id)
+    if rec is None:
+        print("no such record: %s" % a.id, file=sys.stderr)
+        return 2
+    changes, errors = _coerce(kinds[rec["kind"]], a.set or [], {})
+    if errors:
+        for e in errors:
+            print("error: " + e)
+        return 2
+    try:
+        plan = plan_set(root, kinds, a.id, changes, a.unset or [])
+        if plan["errors"]:
+            raise ChangeError(plan["errors"])
+        if not plan["diff"]:
+            print("no changes")
+            return 0
+        for d in plan["diff"]:
+            print("  %s: %s -> %s" % (d["field"], "(unset)" if d["old"] is None else d["old"], "(unset)" if d["new"] is None else d["new"]))
+        if not a.apply:
+            print("preview only: add --apply to change it")
+            return 0
+        done = apply_set(root, kinds, a.id, changes, a.unset or [], actor=a.actor)
+    except ChangeError as e:
+        return _fail(e)
+    print("%s changed (rev %d); run `assembly dispatch %s --apply` to write a revised task document" % (a.id, done["rev"], a.id))
+    return 0
+
+
+def cmd_retire(a, root, kinds) -> int:
+    try:
+        check_retire(root, kinds, a.id)
+        if not a.apply:
+            print("would retire %s (%s)" % (a.id, a.reason))
+            print("preview only: add --apply to retire it")
+            return 0
+        retire(root, kinds, a.id, a.reason, actor=a.actor)
+    except ChangeError as e:
+        return _fail(e)
+    print("%s retired" % a.id)
+    return 0
+
+
+def cmd_supersede(a, root, kinds) -> int:
+    try:
+        check_supersede(root, kinds, a.id, a.by)
+        if not a.apply:
+            print("would retire %s and link %s to it (supersedes)" % (a.id, a.by))
+            print("preview only: add --apply to do it")
+            return 0
+        supersede(root, kinds, a.id, a.by, actor=a.actor)
+    except ChangeError as e:
+        return _fail(e)
+    print("%s retired, superseded by %s" % (a.id, a.by))
     return 0
 
 
@@ -234,13 +307,19 @@ def main(argv: Optional[List[str]] = None, root: Optional[Path] = None) -> int:
     s = sub.add_parser("list"); s.add_argument("kind", nargs="?")
     sub.add_parser("lint")
     s = sub.add_parser("dispatch"); s.add_argument("id"); s.add_argument("--outbox"); s.add_argument("--apply", action="store_true")
+    s = sub.add_parser("set"); s.add_argument("id"); s.add_argument("--set", action="append"); s.add_argument("--unset", action="append")
+    s.add_argument("--actor", default="owner"); s.add_argument("--apply", action="store_true")
+    s = sub.add_parser("retire"); s.add_argument("id"); s.add_argument("--reason", required=True)
+    s.add_argument("--actor", default="owner"); s.add_argument("--apply", action="store_true")
+    s = sub.add_parser("supersede"); s.add_argument("id", help="the record being replaced"); s.add_argument("--by", required=True, help="the replacing record")
+    s.add_argument("--actor", default="owner"); s.add_argument("--apply", action="store_true")
     s = sub.add_parser("resume"); s.add_argument("id"); s.add_argument("--outbox")
     s = sub.add_parser("handback"); s.add_argument("--runs"); s.add_argument("--apply", action="store_true")
     s = sub.add_parser("confirm"); s.add_argument("id")
     a = p.parse_args(argv)
     kinds = load_kinds(REPO / "kinds")
     return {"kinds": cmd_kinds, "new": cmd_new, "show": cmd_show, "list": cmd_list, "lint": cmd_lint,
-            "dispatch": cmd_dispatch, "resume": cmd_resume, "handback": cmd_handback, "confirm": cmd_confirm}[a.cmd](a, root, kinds)
+            "dispatch": cmd_dispatch, "set": cmd_set, "retire": cmd_retire, "supersede": cmd_supersede, "resume": cmd_resume, "handback": cmd_handback, "confirm": cmd_confirm}[a.cmd](a, root, kinds)
 
 
 if __name__ == "__main__":
