@@ -63,19 +63,28 @@ def load_kinds(kinds_dir: Path) -> Dict[str, Kind]:
     return kinds
 
 
-def validate_fields(kind: Kind, values: Dict[str, Any]) -> List[str]:
+def validate_fields(kind: Kind, values: Dict[str, Any], draft: bool = False) -> List[str]:
     """Return error strings that name the field; empty list means valid."""
     errors: List[str] = []
+    if draft and kind.name != "question":
+        errors.append("draft capture is only available for questions")
     known = {f.name for f in kind.fields}
     for name in values:
         if name not in known:
             errors.append("%s: unknown field for kind %s" % (name, kind.name))
     for f in kind.fields:
         if f.name not in values or values[f.name] in (None, "", []):
-            if f.required:
+            if f.required and (not draft or f.name == "text"):
                 errors.append("%s: required" % f.name)
             continue
         v = values[f.name]
+        if isinstance(v, str):
+            try:
+                v.encode("utf-8")
+            except UnicodeError:
+                errors.append("%s: must contain valid Unicode text" % f.name)
+        if draft and f.name == "text" and isinstance(v, str) and not v.strip():
+            errors.append("text: a question cannot be blank")
         if f.type == "text" and not isinstance(v, str):
             errors.append("%s: must be text" % f.name)
         elif f.type == "text" and f.pattern and not re.fullmatch(f.pattern, v):
