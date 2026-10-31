@@ -48,6 +48,8 @@ def _write_creation(root: Path, c: Dict[str, Any]) -> None:
     statuses = [s["status"] for s in c["steps"]]
     if any(s in ("pending", "failed") for s in statuses):
         c["state"] = "partial"
+    elif "held" in statuses:
+        c["state"] = "draft"  # captured, deliberately not dispatched; release_held dispatches it
     elif "manual" in statuses:
         c["state"] = "manual-pending"
     else:
@@ -83,7 +85,9 @@ def _run_handoffs(root: Path, kinds: Dict[str, Kind], c: Dict[str, Any], outbox:
 
 
 def apply_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dict[str, Any],
-                 outbox: Path, emit: Optional[Callable] = None, existing: bool = False) -> Dict[str, Any]:
+                 outbox: Path, emit: Optional[Callable] = None, existing: bool = False,
+                 hold_handoffs: bool = False) -> Dict[str, Any]:
+    """hold_handoffs: capture the record but leave its handoff steps `held` (state `draft`); nothing is dispatched."""
     plan = plan_create(root, kinds, kind_name, values, existing)
     if plan["errors"]:
         raise CreationError(plan["errors"])
@@ -94,7 +98,7 @@ def apply_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dic
     save(root, rec)
     c = {"id": id, "kind": kind_name, "state": "partial", "steps": []}
     for s in plan["steps"]:
-        status = {"profile": "done", "handoff": "pending", "manual": "manual"}[s["do"]]
+        status = {"profile": "done", "handoff": "held" if hold_handoffs else "pending", "manual": "manual"}[s["do"]]
         entry = {"id": s["id"], "do": s["do"], "status": status, "detail": s.get("text", "")}
         if s.get("template"):
             entry["template"] = s["template"]
@@ -106,6 +110,18 @@ def apply_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dic
 
 def resume_create(root: Path, kinds: Dict[str, Kind], id: str, outbox: Path, emit: Optional[Callable] = None) -> Dict[str, Any]:
     c = json.loads(_creation_path(root, id).read_text(encoding="utf-8"))
+    _run_handoffs(root, kinds, c, outbox, emit or _default_emit)
+    _write_creation(root, c)
+    return c
+
+
+def release_held(root: Path, kinds: Dict[str, Kind], id: str, outbox: Path, emit: Optional[Callable] = None) -> Dict[str, Any]:
+    """Dispatch a draft: held handoff steps become pending and run. The explicit, separate action."""
+    c = json.loads(_creation_path(root, id).read_text(encoding="utf-8"))
+    for s in c["steps"]:
+        if s["status"] == "held":
+            s["status"] = "pending"
+    _write_creation(root, c)
     _run_handoffs(root, kinds, c, outbox, emit or _default_emit)
     _write_creation(root, c)
     return c

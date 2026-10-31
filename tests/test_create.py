@@ -126,3 +126,20 @@ class CreateTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HeldCreateTest(CreateTest):
+    def test_held_creation_dispatches_nothing_until_released(self):
+        from assembly.create import release_held
+        rec = Recorder()
+        c = apply_create(self.root, KINDS, "question", dict(GOOD), self.outbox, emit=rec, hold_handoffs=True)
+        self.assertEqual(rec.calls, [])
+        self.assertEqual(c["state"], "draft")
+        self.assertEqual([s["status"] for s in c["steps"] if s["do"] == "handoff"], ["held"])
+        self.assertEqual(load(self.root, c["id"], KINDS)["status"], "new")
+        self.assertEqual(resume_create(self.root, KINDS, c["id"], self.outbox, emit=rec)["state"], "draft")
+        self.assertEqual(rec.calls, [])
+        out = release_held(self.root, KINDS, c["id"], self.outbox, emit=rec)
+        self.assertEqual(rec.calls, [(c["id"], "dispatch")])
+        self.assertEqual(out["state"], "complete")
+        self.assertEqual(load(self.root, c["id"], KINDS)["status"], "dispatched")
