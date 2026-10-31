@@ -64,3 +64,46 @@ def apply_handback(root: Path, kinds: Dict[str, Kind], runs_root: Path, dry_run:
             save(root, rec)
             log.append("%s: %s -> %s (run %s)" % (id, old, new_status, latest["run_id"]))
     return log
+
+
+def run_result(runs_root: Path, ref: str, max_bytes: int = 20000) -> "Dict[str, Any] | None":
+    """Read-only view of the latest run for a record: its text files (each cut at max_bytes). Binary or unreadable files are
+    named under `skipped`, never read. Returns None when no run carries the record's tag."""
+    runs, _ = find_runs(runs_root, ref)
+    if not runs:
+        return None
+    latest = runs[-1]
+    folder = None
+    for run_md in Path(runs_root).rglob("run.md"):
+        if run_md.parent.name == latest["run_id"] or _run_id(run_md) == latest["run_id"]:
+            folder = run_md.parent
+            break
+    out: Dict[str, Any] = {"run_id": latest["run_id"], "status": latest["status"], "machine": latest["machine"],
+                           "tool": latest["actual_tool"] or latest["tool"], "updated": latest["updated"],
+                           "files": {}, "skipped": [], "truncated": [], "older_runs": len(runs) - 1}
+    if folder is None:
+        return out
+    for f in sorted(folder.iterdir()):
+        if not f.is_file() or f.is_symlink():
+            continue
+        try:
+            raw = f.read_bytes()[: max_bytes + 1]
+            text = raw.decode("utf-8")
+        except (OSError, UnicodeDecodeError):
+            out["skipped"].append(f.name)
+            continue
+        if "\x00" in text:
+            out["skipped"].append(f.name)
+            continue
+        if len(text) > max_bytes:
+            text = text[:max_bytes]
+            out["truncated"].append(f.name)
+        out["files"][f.name] = text
+    return out
+
+
+def _run_id(run_md: Path) -> str:
+    try:
+        return parse_frontmatter(run_md.read_text(encoding="utf-8")).get("id", "")
+    except (OSError, ValueError, UnicodeDecodeError):
+        return ""

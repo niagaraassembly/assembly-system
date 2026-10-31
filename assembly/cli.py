@@ -12,6 +12,7 @@ from .handback import apply_handback
 from .handoff import build_task, emit_for_step
 from .ids import parse_id
 from .kinds import Kind, load_kinds, validate_fields
+from .lint import lint as lint_records
 from .records import add_event, list_ids, load, save
 
 REPO = Path(__file__).resolve().parent.parent
@@ -137,26 +138,7 @@ def cmd_list(a, root, kinds) -> int:
 
 
 def cmd_lint(a, root, kinds) -> int:
-    errors, warnings = [], []
-    for k in kinds.values():
-        for id in list_ids(root, k.name):
-            rec = load(root, id, kinds)
-            for e in validate_fields(k, rec["fields"]):
-                errors.append("%s: %s" % (id, e))
-            for f in k.fields:
-                v = rec["fields"].get(f.name)
-                if f.type == "link" and v and v not in list_ids(root, f.target):
-                    errors.append("%s: %s: %s does not exist" % (id, f.name, v))
-                elif f.type == "link" and v:
-                    target = load(root, v, kinds)
-                    if f.name == "supersedes" and target["status"] != "retired":
-                        warnings.append("%s: supersedes %s but %s is not retired" % (id, v, v))
-                    elif f.name != "supersedes" and target["status"] == "retired" and rec["status"] != "retired":
-                        warnings.append("%s: %s points at retired record %s" % (id, f.name, v))
-    for cp in sorted((Path(root) / "creations").glob("*.json")) if (Path(root) / "creations").exists() else []:
-        c = json.loads(cp.read_text())
-        if c.get("state") == "partial":
-            warnings.append("%s: creation is partial (resume it: failed or pending steps remain)" % c["id"])
+    errors, warnings = lint_records(root, kinds)
     for e in errors:
         print("error: " + e)
     for w in warnings:

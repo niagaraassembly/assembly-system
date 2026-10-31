@@ -100,3 +100,29 @@ class HandbackTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RunResultTest(HandbackTest):
+    def test_run_result_reads_latest_run_files_read_only(self):
+        from assembly.handback import run_result
+        d = make_run(self.runs, "r1", "Q-0001", status="done")
+        (d / "output.md").write_text("Found 3 permits\n", encoding="utf-8")
+        (d / "big.bin").write_bytes(b"\x00" * 10)
+        make_run(self.runs, "r0", "Q-0001", status="failed", month="09")
+        res = run_result(self.runs, "Q-0001")
+        self.assertEqual(res["run_id"], "r1")
+        self.assertEqual(res["status"], "done")
+        self.assertEqual(res["files"]["output.md"], "Found 3 permits\n")
+        self.assertIn("run.md", res["files"])
+        self.assertNotIn("big.bin", res["files"])           # binary files are named, not read
+        self.assertIn("big.bin", res["skipped"])
+        self.assertEqual(res["older_runs"], 1)
+
+    def test_run_result_truncates_and_handles_absent(self):
+        from assembly.handback import run_result
+        self.assertIsNone(run_result(self.runs, "Q-0001"))
+        d = make_run(self.runs, "r1", "Q-0001", status="done")
+        (d / "output.md").write_text("x" * 50000, encoding="utf-8")
+        res = run_result(self.runs, "Q-0001", max_bytes=1000)
+        self.assertEqual(len(res["files"]["output.md"]), 1000)
+        self.assertIn("output.md", res["truncated"])
