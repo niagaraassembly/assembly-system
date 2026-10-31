@@ -23,6 +23,12 @@ def _load(root: Path, kinds: Dict[str, Kind], id: str) -> Dict[str, Any]:
         raise ChangeError(["%s: no such record" % id])
 
 
+def expect_rev(rec: Dict[str, Any], expected: Any) -> None:
+    """Refuse a change made from a stale view: the caller says which rev it loaded."""
+    if expected is not None and rec.get("rev", 0) != expected:
+        raise ChangeError(["%s changed since you loaded it (now rev %d, you had rev %s). Reload and try again." % (rec["id"], rec.get("rev", 0), expected)])
+
+
 def _show(v: Any) -> str:
     return "(unset)" if v is None else " ".join(str(v).split())[:80]
 
@@ -47,7 +53,8 @@ def plan_set(root: Path, kinds: Dict[str, Kind], id: str, changes: Dict[str, Any
 
 
 def apply_set(root: Path, kinds: Dict[str, Kind], id: str, changes: Dict[str, Any], unset: List[str],
-              actor: str = "owner") -> Dict[str, Any]:
+              actor: str = "owner", expected_rev: Any = None) -> Dict[str, Any]:
+    expect_rev(_load(root, kinds, id), expected_rev)
     plan = plan_set(root, kinds, id, changes, unset)
     if plan["errors"]:
         raise ChangeError(plan["errors"])
@@ -70,8 +77,10 @@ def check_retire(root: Path, kinds: Dict[str, Kind], id: str) -> Dict[str, Any]:
     return rec
 
 
-def retire(root: Path, kinds: Dict[str, Kind], id: str, reason: str, actor: str = "owner", detail: str = "") -> Dict[str, Any]:
+def retire(root: Path, kinds: Dict[str, Kind], id: str, reason: str, actor: str = "owner", detail: str = "",
+           expected_rev: Any = None) -> Dict[str, Any]:
     rec = check_retire(root, kinds, id)
+    expect_rev(rec, expected_rev)
     rec["status"] = "retired"
     add_event(rec, "retired", "%s [by %s]" % (detail or reason, actor))
     save(root, rec)
@@ -97,7 +106,9 @@ def check_supersede(root: Path, kinds: Dict[str, Kind], old_id: str, new_id: str
     return old, new
 
 
-def supersede(root: Path, kinds: Dict[str, Kind], old_id: str, new_id: str, actor: str = "owner") -> Dict[str, Any]:
-    check_supersede(root, kinds, old_id, new_id)
+def supersede(root: Path, kinds: Dict[str, Kind], old_id: str, new_id: str, actor: str = "owner",
+              expected_rev: Any = None) -> Dict[str, Any]:
+    old, _ = check_supersede(root, kinds, old_id, new_id)
+    expect_rev(old, expected_rev)
     apply_set(root, kinds, new_id, {"supersedes": old_id}, [], actor=actor)
     return retire(root, kinds, old_id, "", actor=actor, detail="superseded by %s" % new_id)

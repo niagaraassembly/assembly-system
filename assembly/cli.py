@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .actions import confirm_record, dispatch_record
 from .change import ChangeError, apply_set, check_retire, check_supersede, plan_set, retire, supersede
 from .create import CreationError, _applies, apply_create, plan_create, resume_create
 from .handback import apply_handback
@@ -162,18 +163,16 @@ def cmd_dispatch(a, root, kinds) -> int:
         print("nothing to dispatch for %s (no handoff step applies)" % a.id, file=sys.stderr)
         return 2
     outbox = _outbox(root, a.outbox)
-    for s in steps:
-        if not a.apply:
-            print("would write %s" % (outbox / build_task(rec, kind, s)[0]))
-        else:
-            path = emit_for_step(root, rec, kind, s, outbox)
-            print("wrote %s" % path)
     if not a.apply:
+        for s in steps:
+            print("would write %s" % (outbox / build_task(rec, kind, s)[0]))
         print("preview only: add --apply to write it")
-    elif rec["status"] == "new":
-        rec["status"] = "dispatched"
-        add_event(rec, "dispatched", "dispatch command")
-        save(root, rec)
+        return 0
+    try:
+        for p in dispatch_record(root, kinds, a.id, outbox):
+            print("wrote %s" % p)
+    except ChangeError as e:
+        return _fail(e)
     return 0
 
 
@@ -267,16 +266,15 @@ def cmd_handback(a, root, kinds) -> int:
 
 
 def cmd_confirm(a, root, kinds) -> int:
-    rec = _find(root, kinds, a.id)
-    if rec is None:
+    if _find(root, kinds, a.id) is None:
         print("no such record: %s" % a.id, file=sys.stderr)
         return 2
-    if rec["status"] != "awaiting-confirmation":
-        print("%s is %s, not awaiting-confirmation; only the owner confirms a finished run" % (a.id, rec["status"]), file=sys.stderr)
+    try:
+        confirm_record(root, kinds, a.id)
+    except ChangeError as e:
+        for err in e.errors:
+            print(err, file=sys.stderr)
         return 2
-    rec["status"] = "answered"
-    add_event(rec, "confirmed", "owner")
-    save(root, rec)
     print("%s answered" % a.id)
     return 0
 
