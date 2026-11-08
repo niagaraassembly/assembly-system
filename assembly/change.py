@@ -4,6 +4,8 @@ Every change is validated like a creation, recorded in the history (old -> new, 
 so a revised handoff document can sit beside the earlier one. Retired records are read-only. Nothing is deleted.
 """
 from pathlib import Path
+import datetime
+import shutil
 from typing import Any, Dict, List
 
 from .kinds import Kind, validate_fields
@@ -40,7 +42,11 @@ def plan_set(root: Path, kinds: Dict[str, Kind], id: str, changes: Dict[str, Any
         if kind.field(k) is None:
             errors.append("%s: unknown field for kind %s" % (k, kind.name))
         merged.pop(k, None)
-    errors += validate_fields(kind, merged)
+    if rec.get("draft") and merged.get("text") != rec["fields"].get("text"):
+        errors.append("text: preserve the original submission; create a linked question instead")
+    if rec.get("draft") and merged.get("source_question") != rec["fields"].get("source_question"):
+        errors.append("source_question: preserve the originating submission; create a linked question instead")
+    errors += validate_fields(kind, merged, draft=bool(rec.get("draft")))
     diff = [{"field": k, "old": rec["fields"].get(k), "new": merged.get(k)}
             for k in sorted(set(rec["fields"]) | set(merged)) if rec["fields"].get(k) != merged.get(k)]
     return {"id": id, "kind": kind.name, "errors": errors, "diff": diff, "merged": merged, "rev": rec.get("rev", 0)}
@@ -54,6 +60,7 @@ def apply_set(root: Path, kinds: Dict[str, Kind], id: str, changes: Dict[str, An
     if not plan["diff"]:
         return plan
     rec = _load(root, kinds, id)
+    _backup(root, rec)
     rec["fields"] = plan["merged"]
     rec["rev"] = rec.get("rev", 0) + 1
     add_event(rec, "changed", "; ".join("%s: %s -> %s" % (d["field"], _show(d["old"]), _show(d["new"])) for d in plan["diff"])
@@ -61,6 +68,15 @@ def apply_set(root: Path, kinds: Dict[str, Kind], id: str, changes: Dict[str, An
     save(root, rec)
     plan["rev"] = rec["rev"]
     return plan
+
+
+def _backup(root: Path, rec: Dict[str, Any]) -> None:
+    """Keep the exact prior profile before an explicit field/state change."""
+    source = Path(root) / "profiles" / rec["kind"] / (rec["id"] + ".json")
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    folder = Path(root) / "backups" / "profiles" / rec["kind"] / rec["id"]
+    folder.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(str(source), str(folder / (stamp + ".json")))
 
 
 def check_retire(root: Path, kinds: Dict[str, Kind], id: str) -> Dict[str, Any]:
@@ -72,6 +88,7 @@ def check_retire(root: Path, kinds: Dict[str, Kind], id: str) -> Dict[str, Any]:
 
 def retire(root: Path, kinds: Dict[str, Kind], id: str, reason: str, actor: str = "owner", detail: str = "") -> Dict[str, Any]:
     rec = check_retire(root, kinds, id)
+    _backup(root, rec)
     rec["status"] = "retired"
     add_event(rec, "retired", "%s [by %s]" % (detail or reason, actor))
     save(root, rec)

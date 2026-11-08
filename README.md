@@ -43,6 +43,30 @@ bin/assembly confirm ID                                    # owner: a finished r
 Run the tests: `python3 -m unittest discover -s tests` (Python 3.9+, standard library only; the conformance
 tests use the real `mach run --dry-run` when `mach` is installed).
 
+## Local questions workspace
+
+The website now lives in [niagaraassembly/assembly-site](https://github.com/niagaraassembly/assembly-site).
+Its HTTP adapter and browser assets are separate from this core. See its README for launch and configuration.
+
+Assembly owns question drafts, kinds, IDs, validation, immutable original text/source links, history and backups.
+The question kind's `capture.metadata` list controls which schema fields the capture interface may edit.
+Draft capture never emits handoffs during creation, resume or dispatch.
+
+Use `ASSEMBLY_ROOT` to select a record store outside the checkout. A local ignored `.assembly-record-root`
+file can redirect this checkout's CLI to an existing absolute record directory; explicit root/environment
+settings take precedence. Migrated runtime data stays outside Git; the local pre-migration files are a
+rollback copy and are no longer active when the redirect is present.
+
+```sh
+ASSEMBLY_ROOT=~/na/local-data/assembly bin/assembly list question
+bin/assembly new question --draft --set text="What can this region make?"  # preview
+bin/assembly new question --draft --from /path/to/question.json --apply
+```
+
+The JSON file is a field object such as `{"text": "Full original text", "title": "Optional title"}`.
+Metadata edits use `set`; originals develop through separately linked questions. Promotion to executable
+work and final Mach integration remain separate future steps.
+
 ## Layout
 
 `assembly/` code · `kinds/*.json` what each kind of thing carries (add a kind by adding a file) ·

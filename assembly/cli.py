@@ -92,14 +92,15 @@ def cmd_new(a, root, kinds) -> int:
         return 2
     base = json.loads(Path(a.from_file).read_text(encoding="utf-8")) if a.from_file else {}
     values, errors = _coerce(kinds[a.kind], a.set or [], base)
-    plan = plan_create(root, kinds, a.kind, values, a.existing)
+    plan = plan_create(root, kinds, a.kind, values, a.existing, draft=a.draft)
     errors += plan["errors"]
     if errors:
         for e in errors:
             print("error: " + e)
         return 2
     if not a.apply:
-        print("would create %s (the ID is minted on --apply)%s" % (a.kind, "; it already exists, so profile only" if a.existing else ""))
+        suffix = "; capture-only draft, no handoff" if a.draft else ("; it already exists, so profile only" if a.existing else "")
+        print("would create %s (the ID is minted on --apply)%s" % (a.kind, suffix))
         for k, v in sorted(values.items()):
             print("  %s: %s" % (k, v))
         for s in plan["steps"]:
@@ -107,7 +108,7 @@ def cmd_new(a, root, kinds) -> int:
         print("preview only: add --apply to create it")
         return 0
     try:
-        c = apply_create(root, kinds, a.kind, values, _outbox(root, a.outbox), existing=a.existing)
+        c = apply_create(root, kinds, a.kind, values, _outbox(root, a.outbox), existing=a.existing, draft=a.draft)
     except CreationError as e:
         for err in e.errors:
             print("error: " + err)
@@ -141,7 +142,7 @@ def cmd_lint(a, root, kinds) -> int:
     for k in kinds.values():
         for id in list_ids(root, k.name):
             rec = load(root, id, kinds)
-            for e in validate_fields(k, rec["fields"]):
+            for e in validate_fields(k, rec["fields"], draft=bool(rec.get("draft"))):
                 errors.append("%s: %s" % (id, e))
             for f in k.fields:
                 v = rec["fields"].get(f.name)
@@ -151,7 +152,7 @@ def cmd_lint(a, root, kinds) -> int:
                     target = load(root, v, kinds)
                     if f.name == "supersedes" and target["status"] != "retired":
                         warnings.append("%s: supersedes %s but %s is not retired" % (id, v, v))
-                    elif f.name != "supersedes" and target["status"] == "retired" and rec["status"] != "retired":
+                    elif f.name not in ("supersedes", "source_question") and target["status"] == "retired" and rec["status"] != "retired":
                         warnings.append("%s: %s points at retired record %s" % (id, f.name, v))
     for cp in sorted((Path(root) / "creations").glob("*.json")) if (Path(root) / "creations").exists() else []:
         c = json.loads(cp.read_text())
@@ -170,6 +171,9 @@ def cmd_dispatch(a, root, kinds) -> int:
     rec = _find(root, kinds, a.id)
     if rec is None:
         print("no such record: %s" % a.id, file=sys.stderr)
+        return 2
+    if rec.get("draft"):
+        print("%s is a captured draft; no work is dispatched" % a.id, file=sys.stderr)
         return 2
     if rec["status"] == "retired":
         print("%s is retired; nothing is dispatched for a retired record" % a.id, file=sys.stderr)
@@ -227,7 +231,9 @@ def cmd_set(a, root, kinds) -> int:
     except ChangeError as e:
         return _fail(e)
     hint = ""
-    if any(st["do"] == "handoff" for st in kinds[rec["kind"]].steps) and done["diff"]:
+    if rec.get("draft"):
+        hint = "; capture-only draft, no handoff"
+    elif any(st["do"] == "handoff" for st in kinds[rec["kind"]].steps) and done["diff"]:
         hint = "; run `assembly dispatch %s --apply` to write a revised task document" % a.id
     print("%s changed (rev %d)%s" % (a.id, done["rev"], hint))
     return 0
@@ -299,14 +305,29 @@ def cmd_confirm(a, root, kinds) -> int:
     return 0
 
 
+def resolve_root(root=None, repo=None):
+    repo = Path(repo or REPO)
+    explicit = root or os.environ.get("ASSEMBLY_ROOT")
+    if explicit:
+        return Path(explicit).expanduser()
+    marker = repo / ".assembly-record-root"
+    if marker.exists():
+        target = Path(marker.read_text(encoding="utf-8").strip()).expanduser()
+        if not target.is_absolute() or not target.is_dir():
+            raise ValueError("The local Assembly record-root redirect must point to an existing absolute directory.")
+        return target
+    return repo
+
+
 def main(argv: Optional[List[str]] = None, root: Optional[Path] = None) -> int:
-    root = Path(root or os.environ.get("ASSEMBLY_ROOT") or REPO)
+    root = resolve_root(root)
     p = argparse.ArgumentParser(prog="assembly", description="Assembly System: create, dispatch and track company records.")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("kinds"); s.add_argument("kind", nargs="?")
     s = sub.add_parser("new"); s.add_argument("kind"); s.add_argument("--set", action="append"); s.add_argument("--from", dest="from_file")
     s.add_argument("--outbox"); s.add_argument("--apply", action="store_true")
     s.add_argument("--existing", action="store_true", help="the thing already exists: record a profile only, no provisioning or handoff")
+    s.add_argument("--draft", action="store_true", help="capture a question without readiness metadata or any handoff")
     s = sub.add_parser("show"); s.add_argument("id")
     s = sub.add_parser("list"); s.add_argument("kind", nargs="?")
     sub.add_parser("lint")

@@ -2,7 +2,23 @@
   "kind": "question",
   "prefix": "Q",
   "description": "A precise question that advances the presence and obtainment of information, framed by one lens of regional industrial reality.",
+  "capture": {
+    "metadata": ["lens", "region", "horizon", "cadence", "origin", "trust", "sensitivity", "status_note"]
+  },
   "fields": [
+    {
+      "name": "title",
+      "type": "text",
+      "required": false,
+      "description": "Optional short title; original question text is preserved separately."
+    },
+    {
+      "name": "source_question",
+      "type": "link",
+      "required": false,
+      "target": "question",
+      "description": "The originating submission from which this question was developed."
+    },
     {
       "name": "text",
       "type": "text",

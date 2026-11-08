@@ -31,13 +31,25 @@ def _steps_for(kind: Kind, values: Dict[str, Any], existing: bool = False) -> Li
     return steps
 
 
-def plan_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dict[str, Any], existing: bool = False) -> Dict[str, Any]:
+def plan_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dict[str, Any], existing: bool = False,
+                draft: bool = False) -> Dict[str, Any]:
     """Preview only: validates and lists the steps. Writes nothing and mints nothing."""
     if kind_name not in kinds:
         return {"kind": kind_name, "errors": ["unknown kind %r (known: %s)" % (kind_name, ", ".join(sorted(kinds)))],
                 "steps": [], "fields": values}
     kind = kinds[kind_name]
-    return {"kind": kind_name, "errors": validate_fields(kind, values), "steps": _steps_for(kind, values, existing), "fields": values}
+    errors = validate_fields(kind, values, draft=draft)
+    if draft and existing:
+        errors.append("choose either draft capture or an existing thing")
+    source = values.get("source_question")
+    if source and not errors:
+        try:
+            parent = load(root, source, kinds)
+            if parent["kind"] != "question":
+                errors.append("source_question: must refer to a question")
+        except (OSError, KeyError, ValueError):
+            errors.append("source_question: %s does not exist" % source)
+    return {"kind": kind_name, "errors": errors, "steps": _steps_for(kind, values, existing or draft), "fields": values}
 
 
 def _creation_path(root: Path, id: str) -> Path:
@@ -66,6 +78,8 @@ def _default_emit(root, rec, kind, step, outbox):
 
 def _run_handoffs(root: Path, kinds: Dict[str, Kind], c: Dict[str, Any], outbox: Path, emit: Callable) -> None:
     rec = load(root, c["id"], kinds)
+    if rec.get("draft"):
+        return  # a capture never executes steps, including during resume
     kind = kinds[rec["kind"]]
     for s in c["steps"]:
         if s["do"] != "handoff" or s["status"] not in ("pending", "failed"):
@@ -83,14 +97,19 @@ def _run_handoffs(root: Path, kinds: Dict[str, Kind], c: Dict[str, Any], outbox:
 
 
 def apply_create(root: Path, kinds: Dict[str, Kind], kind_name: str, values: Dict[str, Any],
-                 outbox: Path, emit: Optional[Callable] = None, existing: bool = False) -> Dict[str, Any]:
-    plan = plan_create(root, kinds, kind_name, values, existing)
+                 outbox: Path, emit: Optional[Callable] = None, existing: bool = False,
+                 draft: bool = False) -> Dict[str, Any]:
+    plan = plan_create(root, kinds, kind_name, values, existing, draft=draft)
     if plan["errors"]:
         raise CreationError(plan["errors"])
     kind = kinds[kind_name]
     id = mint(root, kind.prefix)
     rec = new_record(kind, id, values)
-    add_event(rec, "created", "creation action (already exists: profile only)" if existing else "creation action")
+    if draft:
+        rec["draft"], rec["status"] = True, "draft"
+    detail = "creation action (draft question: capture only)" if draft else (
+        "creation action (already exists: profile only)" if existing else "creation action")
+    add_event(rec, "created", detail)
     save(root, rec)
     c = {"id": id, "kind": kind_name, "state": "partial", "steps": []}
     for s in plan["steps"]:
